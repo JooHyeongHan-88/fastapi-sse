@@ -17,17 +17,23 @@ class Job():
     def result(self):
         return self._result
 
+    async def query(self):
+        await asyncio.sleep(3)
+        self._result = pd.DataFrame({"A": [1, 2, 3], "B": [10, 20, 30]})
+
+    async def preprocess(self):
+        await asyncio.sleep(3)
+        self._result = pd.DataFrame({"A": [1, 2, 3, 4], "B": [10, 20, 30, 40]})
+
+    async def process(self):
+        yield json.dumps({"status": 0.1, "msg": "query"}) + "\n"
+        await self.query()
+        yield json.dumps({"status": 0.5, "msg": "preprocess"}) + "\n"
+        await self.preprocess()
+        yield json.dumps({"status": 1.0, "msg": "complete"})
+
 
 job = Job()
-
-
-async def generator():
-    job._result = pd.DataFrame()
-    for i in range(10):
-        if i == 9:
-            job._result = pd.DataFrame({"A": [1, 2, 3], "B": [10, 20, 30]})
-        await asyncio.sleep(0.1)
-        yield json.dumps({"status": 0.1*(i + 1), "msg": f"status: {i + 1}/[10]"}) + "\n"
 
 
 @app.get("/")
@@ -35,12 +41,11 @@ async def main():
     return {"msg": "Hello World"}
 
 
-@app.get("/status")
-async def return_status():
-    return StreamingResponse(generator(), media_type='application/json')
+@app.get("/process")
+async def start_process():
+    return StreamingResponse(job.process(), media_type='application/json')
 
 
 @app.get("/result")
 async def return_result():
-    df = job.result
-    return {"result": df.to_json()}
+    return {"result": job.result.to_json()}
