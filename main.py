@@ -86,4 +86,5 @@ async def websocket_endpoint(websocket: WebSocket):
         await websocket.send_json(json.dumps({"status": 1.0, "msg": "complete"}))
         await websocket.send_json(json.dumps({"result": df.to_json()}))
     except WebSocketDisconnect:
+        websocket.close()
         logging.info(f"Client {websocket} disconnected")
